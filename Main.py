@@ -17,7 +17,8 @@ def cree_graph(x1, x2, y1, y2, folder_name="", save=False, comment=None):
     # Créer le graphique et définir sa largeur
     if comment is None:
         comment = []
-    plt.figure().set_figwidth(10)  # Ajuster la taille du graphique
+    plt.figure().set_figwidth(50)  # Ajuster la taille du graphique
+    plt.subplots_adjust(left=0.05, right=0.990)
     plt.xticks(np.arange(400, 4000, step=100))  # Définir les ticks de l'axe des x
     plt.margins(x=0)  # Réduire les marges sur l'axe des x
 
@@ -43,12 +44,13 @@ def cree_graph(x1, x2, y1, y2, folder_name="", save=False, comment=None):
             color="red",
             fontsize=10,
             ha="center",  # Alignement horizontal du texte
-            bbox=dict(facecolor="white", alpha=0.7, edgecolor="red")  # Boîte autour du texte
+            bbox=dict(facecolor="white", alpha=0.3, edgecolor="red")  # Boîte autour du texte
         )
-        decalage_texte += 0.11  # Décaler le texte pour éviter qu'ils ne se superposent
+        decalage_texte += 0.115  # Décaler le texte pour éviter qu'ils ne se superposent
 
     # Ajouter des labels et une légende
-    plt.xlabel('Nombre d\'onde (cm^-1)')  # Label de l'axe des x
+    cmMathFormat = r"$\mathrm{cm}^{-1}$"
+    plt.xlabel(f'Nombre d\'onde ({cmMathFormat})')  # Label de l'axe des x
     plt.ylabel('Absorbance')  # Label de l'axe des y
     plt.title(f'Graphique {folder_name}')  # Titre du graphique
     plt.legend()  # Ajouter la légende pour les courbes
