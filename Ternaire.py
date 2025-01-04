@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk, colorchooser, messagebox, filedialog
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import mpltern
+assert mpltern.TernaryAxes is not None;
 import matplotlib.pyplot as plt
 import ttkbootstrap as tb
 
