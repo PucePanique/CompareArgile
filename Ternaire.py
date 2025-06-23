@@ -37,9 +37,13 @@ def validate_abc(a, b, c):
         a, b, c = float(a), float(b), float(c)
     except ValueError:
         return False, _("A, B, and C must be decimal numbers.")
-    if a + b + c != 100:
-        return False, _("The sum of A, B, and C must be exactly 100.")
+    
+    total = a + b + c
+    if not (99.5 <= total <= 100.5):
+        return False, _("The sum of A, B, and C must be approximately 100 (±0.5).")
+    
     return True, ""
+
 
 def validate_legend(legend):
     if not legend.strip():
