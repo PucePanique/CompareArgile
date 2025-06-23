@@ -2,184 +2,211 @@ import tkinter as tk
 from tkinter import ttk, colorchooser, messagebox, filedialog
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import mpltern
-assert mpltern.TernaryAxes is not None;
+assert mpltern.TernaryAxes is not None
 import matplotlib.pyplot as plt
 import ttkbootstrap as tb
+import gettext
+import sys
 
+localedir = 'locales'
+lang = gettext.translation('messages', localedir=localedir, languages=['fr'], fallback=True)
+lang.install()
+_ = lang.gettext
+
+CONFIG = {
+    'window_size': "950x700",
+    'style_theme': "litera",
+    'default_font': "Arial",
+    'font_choices': ["Arial", "Courier", "Times New Roman", "Verdana"],
+    'default_width_cm': 25,
+    'default_height_cm': 20,
+    'title_fontsize': 16,
+    'axis_fontsize': 12,
+    'legend_fontsize': 10,
+    'legend_ncol': 2,
+    'legend_loc': "upper center",
+    'legend_bbox': (0.5, -0.2),
+    'plot_figsize': (10, 8),
+    'color_default': "No Color",
+    'color_bg': "white"
+}
+
+def validate_abc(a, b, c):
+    try:
+        a, b, c = float(a), float(b), float(c)
+    except ValueError:
+        return False, _("A, B, and C must be decimal numbers.")
+    if a + b + c != 100:
+        return False, _("The sum of A, B, and C must be exactly 100.")
+    return True, ""
+
+def validate_legend(legend):
+    if not legend.strip():
+        return False, _("Legend cannot be empty.")
+    return True, ""
+
+def validate_color(color):
+    if color == CONFIG['color_default']:
+        return False, _("Please select a color.")
+    return True, ""
 
 class TernaryDiagramApp:
-    """
-    Application pour créer et visualiser un diagramme ternaire interactif avec la bibliothèque mpltern.
-    L'utilisateur peut saisir des données, ajouter des légendes, configurer les titres des axes et
-    sauvegarder le graphique généré.
-    """
-
     def __init__(self, master):
-        """
-        Initialise l'interface utilisateur et configure les composants de l'application.
-        :param master: Fenêtre principale Tkinter (tk.Tk).
-        """
         self.master = master
-        self.master.title("Ternary Diagram Generator")
-        self.data_list = []  # Liste pour stocker les données enregistrées
-
-        # Configuration du style avec ttkbootstrap pour un look moderne
-        self.style = tb.Style("litera")  # Choix d'un thème esthétique
-        self.master.geometry("950x700")  # Dimensions initiales de la fenêtre
-
-        # Créer les widgets principaux
+        self.master.title(_("Ternary Diagram Generator"))
+        self.data_list = []
+        self.master.protocol("WM_DELETE_WINDOW", self.on_close)
+        self.style = tb.Style(CONFIG['style_theme'])
+        self.master.geometry(CONFIG['window_size'])
         self.create_widgets()
 
     def create_widgets(self):
-        """
-        Crée les différents widgets de l'interface utilisateur :
-        champs d'entrée, tableaux, boutons, et espace pour afficher le graphique.
-        """
-        # Section pour les entrées de données
+        # Section titre du graphique
+        self.chart_title_frame = ttk.Frame(self.master)
+        self.chart_title_frame.pack(pady=5)
+        ttk.Label(self.chart_title_frame, text=_("Chart Title:")).grid(row=0, column=0, padx=5)
+        self.chart_title_entry = ttk.Entry(self.chart_title_frame, width=30)
+        self.chart_title_entry.grid(row=0, column=1, padx=5)
+
+        # Section titres des axes
+        self.axis_frame = ttk.Frame(self.master)
+        self.axis_frame.pack(pady=5)
+        ttk.Label(self.axis_frame, text=_("Axis 1 Title:")).grid(row=0, column=0, padx=5)
+        self.axis1_entry = ttk.Entry(self.axis_frame, width=15)
+        self.axis1_entry.grid(row=0, column=1, padx=5)
+        ttk.Label(self.axis_frame, text=_("Axis 2 Title:")).grid(row=0, column=2, padx=5)
+        self.axis2_entry = ttk.Entry(self.axis_frame, width=15)
+        self.axis2_entry.grid(row=0, column=3, padx=5)
+        ttk.Label(self.axis_frame, text=_("Axis 3 Title:")).grid(row=0, column=4, padx=5)
+        self.axis3_entry = ttk.Entry(self.axis_frame, width=15)
+        self.axis3_entry.grid(row=0, column=5, padx=5)
+
+         # Section pour la sélection de police et les dimensions
+        self.font_frame = ttk.Frame(self.master)
+        self.font_frame.pack(pady=10)
+
+        ttk.Label(self.font_frame, text=_("Select Font:")).grid(row=0, column=0, padx=5)
+        self.font_var = tk.StringVar(value=CONFIG['default_font'])
+        self.font_dropdown = ttk.Combobox(
+            self.font_frame, textvariable=self.font_var,
+            values=CONFIG['font_choices']
+        )
+        self.font_dropdown.grid(row=0, column=1, padx=5)
+        self.font_dropdown.state(["readonly"])
+
+        ttk.Label(self.font_frame, text=_("Width (cm):")).grid(row=0, column=2, padx=5)
+        self.width_var = tk.DoubleVar(value=CONFIG['default_width_cm'])
+        self.width_entry = ttk.Entry(self.font_frame, textvariable=self.width_var, width=10)
+        self.width_entry.grid(row=0, column=3, padx=5)
+
+        ttk.Label(self.font_frame, text=_("Height (cm):")).grid(row=0, column=4, padx=5)
+        self.height_var = tk.DoubleVar(value=CONFIG['default_height_cm'])
+        self.height_entry = ttk.Entry(self.font_frame, textvariable=self.height_var, width=10)
+        self.height_entry.grid(row=0, column=5, padx=5)
+
+        # Section entrées A, B, C, Couleur, Légende
         self.input_frame = ttk.Frame(self.master)
         self.input_frame.pack(pady=10, padx=10)
 
         ttk.Label(self.input_frame, text="A:").grid(row=0, column=0, padx=5)
         self.entry_a = ttk.Entry(self.input_frame, width=10)
         self.entry_a.grid(row=1, column=0, padx=5)
+        self.entry_a.bind("<Return>", lambda e: self.entry_b.focus_set())
 
         ttk.Label(self.input_frame, text="B:").grid(row=0, column=1, padx=5)
         self.entry_b = ttk.Entry(self.input_frame, width=10)
         self.entry_b.grid(row=1, column=1, padx=5)
+        self.entry_b.bind("<Return>", lambda e: self.entry_c.focus_set())
 
         ttk.Label(self.input_frame, text="C:").grid(row=0, column=2, padx=5)
         self.entry_c = ttk.Entry(self.input_frame, width=10)
         self.entry_c.grid(row=1, column=2, padx=5)
+        self.entry_c.bind("<Return>", lambda e: self.color_button.focus_set())
 
-        # Section pour la sélection de police et les dimensions
-        self.font_frame = ttk.Frame(self.master)
-        self.font_frame.pack(pady=10)
-
-        # Menu déroulant pour la police
-        ttk.Label(self.font_frame, text="Select Font:").grid(row=0, column=0, padx=5)
-        self.font_var = tk.StringVar(value="Helvetica")  # Police par défaut
-        self.font_dropdown = ttk.Combobox(
-            self.font_frame, textvariable=self.font_var,
-            values=["Helvetica", "Arial", "Courier", "Times New Roman", "Verdana"]
-        )
-        self.font_dropdown.grid(row=0, column=1, padx=5)
-        self.font_dropdown.state(["readonly"])  # Empêche l'entrée libre
-
-        # Largeur de l'image
-        ttk.Label(self.font_frame, text="Width (cm):").grid(row=0, column=2, padx=5)
-        self.width_var = tk.DoubleVar(value=25)  # Valeur par défaut : 25 cm
-        self.width_entry = ttk.Entry(self.font_frame, textvariable=self.width_var, width=10)
-        self.width_entry.grid(row=0, column=3, padx=5)
-
-        # Hauteur de l'image
-        ttk.Label(self.font_frame, text="Height (cm):").grid(row=0, column=4, padx=5)
-        self.height_var = tk.DoubleVar(value=20)  # Valeur par défaut : 20 cm
-        self.height_entry = ttk.Entry(self.font_frame, textvariable=self.height_var, width=10)
-        self.height_entry.grid(row=0, column=5, padx=5)
-
-
-        # Sélecteur de couleurs pour personnaliser les points
-        ttk.Label(self.input_frame, text="Color:").grid(row=0, column=3, padx=5)
-        self.color_button = ttk.Button(self.input_frame, text="Select Color", command=self.open_color_picker)
+        ttk.Label(self.input_frame, text=_("Color:")).grid(row=0, column=3, padx=5)
+        self.color_button = ttk.Button(self.input_frame, text=_("Select Color"), command=self.open_color_picker)
         self.color_button.grid(row=1, column=3, padx=5)
-        self.color_label = ttk.Label(self.input_frame, text="No Color", background="white", relief="sunken", width=20)
+        self.color_button.tooltip = CreateToolTip(self.color_button, _("Choose a color for the point"))
+        self.color_label = ttk.Label(self.input_frame, text=CONFIG['color_default'], background=CONFIG['color_bg'], relief="sunken", width=20)
         self.color_label.grid(row=1, column=4, padx=5)
 
-        # Champ pour entrer une légende associée aux données
-        ttk.Label(self.input_frame, text="Legend:").grid(row=0, column=5, padx=5)
+        ttk.Label(self.input_frame, text=_("Legend:")).grid(row=0, column=5, padx=5)
         self.entry_legend = ttk.Entry(self.input_frame, width=15)
         self.entry_legend.grid(row=1, column=5, padx=5)
+        self.entry_legend.bind("<Return>", lambda e: self.submit_button.focus_set())
 
-        # Section pour le titre du graphique
-        self.chart_title_frame = ttk.Frame(self.master)
-        self.chart_title_frame.pack(pady=10)
-
-        ttk.Label(self.chart_title_frame, text="Chart Title:").grid(row=0, column=0, padx=5)
-        self.chart_title_entry = ttk.Entry(self.chart_title_frame, width=30)
-        self.chart_title_entry.grid(row=0, column=1, padx=5)
-
-        # Section pour les titres des axes
-        self.axis_frame = ttk.Frame(self.master)
-        self.axis_frame.pack(pady=10)
-
-        ttk.Label(self.axis_frame, text="Axis 1 Title:").grid(row=0, column=0, padx=5)
-        self.axis1_entry = ttk.Entry(self.axis_frame, width=15)
-        self.axis1_entry.grid(row=0, column=1, padx=5)
-
-        ttk.Label(self.axis_frame, text="Axis 2 Title:").grid(row=0, column=2, padx=5)
-        self.axis2_entry = ttk.Entry(self.axis_frame, width=15)
-        self.axis2_entry.grid(row=0, column=3, padx=5)
-
-        ttk.Label(self.axis_frame, text="Axis 3 Title:").grid(row=0, column=4, padx=5)
-        self.axis3_entry = ttk.Entry(self.axis_frame, width=15)
-        self.axis3_entry.grid(row=0, column=5, padx=5)
 
         # Tableau pour afficher les données enregistrées
         self.data_table = ttk.Treeview(self.master, columns=("A", "B", "C", "Color", "Legend"), show="headings", height=10)
         self.data_table.pack(pady=10, padx=10)
-        self.data_table.heading("A", text="A")
-        self.data_table.heading("B", text="B")
-        self.data_table.heading("C", text="C")
-        self.data_table.heading("Color", text="Color")
-        self.data_table.heading("Legend", text="Legend")
+        for col in ("A", "B", "C", "Color", "Legend"):
+            self.data_table.heading(col, text=_(col))
 
         # Boutons pour les actions
         self.button_frame = ttk.Frame(self.master)
         self.button_frame.pack(pady=10)
 
-        self.submit_button = ttk.Button(self.button_frame, text="Submit", command=self.save_values)
+        self.submit_button = ttk.Button(self.button_frame, text=_("Submit"), command=self.save_values)
         self.submit_button.grid(row=0, column=0, padx=5)
+        self.submit_button.tooltip = CreateToolTip(self.submit_button, _("Add the data to the table"))
+        self.master.bind('<Control-Return>', lambda e: self.save_values())
 
-        self.delete_button = ttk.Button(self.button_frame, text="Delete Selected Row", command=self.delete_selected_row)
+        self.delete_button = ttk.Button(self.button_frame, text=_("Delete Selected Row"), command=self.delete_selected_row)
         self.delete_button.grid(row=0, column=1, padx=5)
+        self.delete_button.tooltip = CreateToolTip(self.delete_button, _("Delete the selected row from the table"))
 
-        self.generate_button = ttk.Button(self.button_frame, text="Generate Ternary Plot", command=self.generate_ternary_plot)
+        self.generate_button = ttk.Button(self.button_frame, text=_("Generate Ternary Plot"), command=self.generate_ternary_plot)
         self.generate_button.grid(row=0, column=2, padx=5)
+        self.generate_button.tooltip = CreateToolTip(self.generate_button, _("Generate the ternary plot from the data"))
 
-        self.save_plot_button = ttk.Button(self.button_frame, text="Save Plot", command=self.save_plot)
+        self.save_plot_button = ttk.Button(self.button_frame, text=_("Save Plot"), command=self.save_plot)
         self.save_plot_button.grid(row=0, column=3, padx=5)
+        self.save_plot_button.tooltip = CreateToolTip(self.save_plot_button, _("Save the current plot as an image"))
 
         # Cadre pour le graphique généré
         self.plot_frame = ttk.Frame(self.master)
-        self.plot_frame.pack(pady=10)
+        self.plot_frame.pack(pady=10, expand=True, fill='both')
+
+    # --- 2. Gestion de la fermeture ---
+    def on_close(self):
+        self.master.destroy()
+        if hasattr(sys, 'exit'):
+            sys.exit(0)
 
     def open_color_picker(self):
-        """
-        Ouvre un sélecteur de couleurs pour permettre à l'utilisateur de choisir une couleur.
-        La couleur sélectionnée est affichée dans un label.
-        """
-        color_code = colorchooser.askcolor(title="Choose a Color")[1]
+        color_code = colorchooser.askcolor(title=_("Choose a Color"))[1]
         if color_code:
             self.color_label.config(text=color_code, background=color_code)
 
     def save_values(self):
-        """
-        Enregistre les valeurs saisies (A, B, C, couleur, légende) après validation.
-        Les données sont ajoutées à une liste et affichées dans un tableau.
-        """
-        try:
-            a = float(self.entry_a.get())
-            b = float(self.entry_b.get())
-            c = float(self.entry_c.get())
-        except ValueError:
-            messagebox.showerror("Input Error", "A, B, and C must be decimal numbers.")
-            return
-
-        if a + b + c != 100:
-            messagebox.showerror("Input Error", "The sum of A, B, and C must be exactly 100.")
-            return
-
+        a = self.entry_a.get()
+        b = self.entry_b.get()
+        c = self.entry_c.get()
+        legend = self.entry_legend.get()
         color = self.color_label.cget("text")
-        if color == "No Color":
-            messagebox.showerror("Input Error", "Please select a color.")
+
+        # --- 5. Utilisation de la logique métier testable ---
+        valid, msg = validate_abc(a, b, c)
+        if not valid:
+            messagebox.showerror(_("Input Error"), msg)
             return
 
-        legend = self.entry_legend.get().strip()
-        if not legend:
-            messagebox.showerror("Input Error", "Legend cannot be empty.")
+        valid, msg = validate_color(color)
+        if not valid:
+            messagebox.showerror(_("Input Error"), msg)
             return
 
-        data = {"A": a, "B": b, "C": c, "Color": color, "Legend": legend}
+        valid, msg = validate_legend(legend)
+        if not valid:
+            messagebox.showerror(_("Input Error"), msg)
+            return
+
+        # --- 6. Gestion des doublons dans la légende ---
+        if any(d["Legend"] == legend for d in self.data_list):
+            messagebox.showerror(_("Input Error"), _("Legend must be unique."))
+            return
+
+        data = {"A": float(a), "B": float(b), "C": float(c), "Color": color, "Legend": legend}
         self.data_list.append(data)
         self.data_table.insert("", tk.END, values=(a, b, c, color, legend))
 
@@ -187,15 +214,12 @@ class TernaryDiagramApp:
         self.entry_b.delete(0, tk.END)
         self.entry_c.delete(0, tk.END)
         self.entry_legend.delete(0, tk.END)
-        self.color_label.config(text="No Color", background="white")
+        self.color_label.config(text=CONFIG['color_default'], background=CONFIG['color_bg'])
 
     def delete_selected_row(self):
-        """
-        Supprime la ligne sélectionnée dans le tableau et dans la liste des données.
-        """
         selected_item = self.data_table.selection()
         if not selected_item:
-            messagebox.showerror("Selection Error", "Please select a row to delete.")
+            messagebox.showerror(_("Selection Error"), _("Please select a row to delete."))
             return
 
         for item in selected_item:
@@ -204,107 +228,135 @@ class TernaryDiagramApp:
             del self.data_list[index]
 
     def generate_ternary_plot(self):
-        """
-        Génère un diagramme ternaire avec des "X" colorés pour représenter les données.
-        La police sélectionnée est appliquée au titre, aux axes, et à la légende.
-        """
         if not self.data_list:
-            messagebox.showerror("Error", "No data available to generate the ternary plot.")
+            messagebox.showerror(_("Error"), _("No data available to generate the ternary plot."))
             return
 
-        # Récupérer les titres des axes
         axis1 = self.axis1_entry.get().strip()
         axis2 = self.axis2_entry.get().strip()
         axis3 = self.axis3_entry.get().strip()
 
         if not axis1 or not axis2 or not axis3:
-            messagebox.showerror("Input Error", "All axis titles must be specified.")
+            messagebox.showerror(_("Input Error"), _("All axis titles must be specified."))
             return
 
-        # Récupérer la police sélectionnée
         selected_font = self.font_var.get()
-
-        # Créer la figure
-        fig = plt.Figure(figsize=(10, 8))
+        fig = plt.Figure(figsize=CONFIG['plot_figsize'])
         ax = fig.add_subplot(111, projection="ternary")
 
-        # Configurer les axes avec la police sélectionnée
-        ax.set_tlabel(axis1, fontsize=12, fontname=selected_font)
-        ax.set_llabel(axis2, fontsize=12, fontname=selected_font)
-        ax.set_rlabel(axis3, fontsize=12, fontname=selected_font)
+        ax.set_tlabel(axis1, fontsize=CONFIG['axis_fontsize'], fontname=selected_font)
+        ax.set_llabel(axis2, fontsize=CONFIG['axis_fontsize'], fontname=selected_font)
+        ax.set_rlabel(axis3, fontsize=CONFIG['axis_fontsize'], fontname=selected_font)
 
-        # Ajouter le titre avec la police sélectionnée
         chart_title = self.chart_title_entry.get().strip()
         if chart_title:
-            ax.set_title(chart_title, fontsize=16, fontname=selected_font, pad=20)
+            ax.set_title(chart_title, fontsize=CONFIG['title_fontsize'], fontname=selected_font, pad=20)
 
-        # Ajouter une grille fine
         ax.grid(True, which="both", color="grey", linestyle="--", linewidth=0.3)
 
-        # Ajouter les "X" colorés pour chaque point
         for data in self.data_list:
-            point = (data["A"] / 100, data["B"] / 100, data["C"] / 100)  # Normaliser les coordonnées
+            point = (data["A"] / 100, data["B"] / 100, data["C"] / 100)
             ax.scatter(
                 [point[0]], [point[1]], [point[2]],
                 color=data["Color"], marker="x", label=data["Legend"], s=25
             )
 
-        # Configurer la légende avec la police sélectionnée
-        ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.2), ncol=2, prop={"family": selected_font, "size": 10})
+        # Légende unique
+        handles, labels = ax.get_legend_handles_labels()
+        by_label = dict(zip(labels, handles))
+        ax.legend(by_label.values(), by_label.keys(),
+                  loc=CONFIG['legend_loc'],
+                  bbox_to_anchor=CONFIG['legend_bbox'],
+                  ncol=CONFIG['legend_ncol'],
+                  prop={"family": selected_font, "size": CONFIG['legend_fontsize']})
 
-        # Ajuster les marges pour éviter les coupures
         fig.tight_layout(rect=[0, 0, 1, 0.95])
 
-        # Supprimer les anciens graphiques dans le cadre
         for widget in self.plot_frame.winfo_children():
             widget.destroy()
 
-        # Intégrer le graphique dans Tkinter
         canvas = FigureCanvasTkAgg(fig, master=self.plot_frame)
-        canvas.get_tk_widget().pack()
+        canvas.get_tk_widget().pack(expand=True, fill='both')
         canvas.draw()
 
         self.current_plot = fig
 
     def save_plot(self):
-        """
-        Sauvegarde le diagramme ternaire généré sous forme d'image avec des dimensions personnalisées.
-        """
         if not self.data_list:
-            messagebox.showerror("Error", "No data available to save.")
+            messagebox.showerror(_("Error"), _("No data available to save."))
             return
 
-        # Demander le chemin de sauvegarde
         file_path = filedialog.asksaveasfilename(
             defaultextension=".png",
-            filetypes=[("PNG files", "*.png"), ("JPEG files", "*.jpg"), ("All files", "*.*")]
+            filetypes=[(_("PNG files"), "*.png"), (_("JPEG files"), "*.jpg"), (_("All files"), "*.*")]
         )
         if not file_path:
             return
 
-        # Récupérer les dimensions spécifiées
         try:
-            width_cm = self.width_var.get()  # Largeur en cm
-            height_cm = self.height_var.get()  # Hauteur en cm
-
-            # Convertir en pouces (1 cm = 0.393701 pouces)
+            width_cm = self.width_var.get()
+            height_cm = self.height_var.get()
             width_inch = width_cm * 0.393701
             height_inch = height_cm * 0.393701
         except tk.TclError:
-            messagebox.showerror("Input Error", "Width and Height must be valid numbers.")
+            messagebox.showerror(_("Input Error"), _("Width and Height must be valid numbers."))
             return
 
-        # Vérifier que les dimensions sont raisonnables
         if width_inch <= 0 or height_inch <= 0:
-            messagebox.showerror("Input Error", "Width and Height must be greater than 0.")
+            messagebox.showerror(_("Input Error"), _("Width and Height must be greater than 0."))
             return
 
-        # Sauvegarder le graphique avec les dimensions spécifiées
-        self.current_plot.set_size_inches(width_inch, height_inch)  # Appliquer les dimensions
-        self.current_plot.savefig(file_path, bbox_inches="tight")
-        messagebox.showinfo("Success", f"Plot saved to {file_path}")
+        try:
+            self.current_plot.set_size_inches(width_inch, height_inch)
+            self.current_plot.savefig(file_path, bbox_inches="tight")
+            messagebox.showinfo(_("Success"), _("Plot saved to {0}").format(file_path))
+        except Exception as e:
+            messagebox.showerror(_("Save Error"), _("Failed to save the plot: {0}").format(str(e)))
 
-#if __name__ == "__main__":
-#    root = tk.Tk()
-#    app = TernaryDiagramApp(root)
-#    root.mainloop()
+# --- 4. Accessibilité : Tooltips ---
+class CreateToolTip(object):
+    def __init__(self, widget, text='widget info'):
+        self.waittime = 500
+        self.wraplength = 180
+        self.widget = widget
+        self.text = text
+        self.widget.bind("<Enter>", self.enter)
+        self.widget.bind("<Leave>", self.leave)
+        self.widget.bind("<ButtonPress>", self.leave)
+        self.id = None
+        self.tw = None
+
+    def enter(self, event=None):
+        self.schedule()
+
+    def leave(self, event=None):
+        self.unschedule()
+        self.hidetip()
+
+    def schedule(self):
+        self.unschedule()
+        self.id = self.widget.after(self.waittime, self.showtip)
+
+    def unschedule(self):
+        id_ = self.id
+        self.id = None
+        if id_:
+            self.widget.after_cancel(id_)
+
+    def showtip(self, event=None):
+        x, y, cx, cy = self.widget.bbox("insert")
+        x += self.widget.winfo_rootx() + 25
+        y += self.widget.winfo_rooty() + 20
+        self.tw = tk.Toplevel(self.widget)
+        self.tw.wm_overrideredirect(True)
+        self.tw.wm_geometry("+%d+%d" % (x, y))
+        label = tk.Label(self.tw, text=self.text, justify='left',
+                         background="#ffffe0", relief='solid', borderwidth=1,
+                         wraplength=self.wraplength)
+        label.pack(ipadx=1)
+
+    def hidetip(self):
+        tw = self.tw
+        self.tw = None
+        if tw:
+            tw.destroy()
