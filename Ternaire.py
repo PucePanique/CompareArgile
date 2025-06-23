@@ -135,6 +135,14 @@ class TernaryDiagramApp:
         self.entry_legend.grid(row=1, column=5, padx=5)
         self.entry_legend.bind("<Return>", lambda e: self.submit_button.focus_set())
 
+        #Bouton d'enregistrement
+
+        self.submit_button = ttk.Button(self.input_frame, text=_("Submit"), command=self.save_values)
+        self.submit_button.grid(row=1, column=6, padx=5)
+        self.submit_button.tooltip = CreateToolTip(self.submit_button, _("Add the data to the table"))
+        self.master.bind('<Control-Return>', lambda e: self.save_values())
+
+
 
         # Tableau pour afficher les données enregistrées
         self.data_table = ttk.Treeview(self.master, columns=("A", "B", "C", "Color", "Legend"), show="headings", height=10)
@@ -142,15 +150,10 @@ class TernaryDiagramApp:
         for col in ("A", "B", "C", "Color", "Legend"):
             self.data_table.heading(col, text=_(col))
 
-        # Boutons pour les actions
+        # Boutons pour les actions        
         self.button_frame = ttk.Frame(self.master)
         self.button_frame.pack(pady=10)
-
-        self.submit_button = ttk.Button(self.button_frame, text=_("Submit"), command=self.save_values)
-        self.submit_button.grid(row=0, column=0, padx=5)
-        self.submit_button.tooltip = CreateToolTip(self.submit_button, _("Add the data to the table"))
-        self.master.bind('<Control-Return>', lambda e: self.save_values())
-
+        
         self.delete_button = ttk.Button(self.button_frame, text=_("Delete Selected Row"), command=self.delete_selected_row)
         self.delete_button.grid(row=0, column=1, padx=5)
         self.delete_button.tooltip = CreateToolTip(self.delete_button, _("Delete the selected row from the table"))
@@ -244,13 +247,13 @@ class TernaryDiagramApp:
         fig = plt.Figure(figsize=CONFIG['plot_figsize'])
         ax = fig.add_subplot(111, projection="ternary")
 
-        ax.set_tlabel(axis1, fontsize=CONFIG['axis_fontsize'], fontname=selected_font)
-        ax.set_llabel(axis2, fontsize=CONFIG['axis_fontsize'], fontname=selected_font)
-        ax.set_rlabel(axis3, fontsize=CONFIG['axis_fontsize'], fontname=selected_font)
+        ax.set_tlabel(axis1, fontsize=CONFIG['axis_fontsize'], fontname=selected_font, labelpad=15)
+        ax.set_llabel(axis2, fontsize=CONFIG['axis_fontsize'], fontname=selected_font, labelpad=15)
+        ax.set_rlabel(axis3, fontsize=CONFIG['axis_fontsize'], fontname=selected_font, labelpad=15)
 
         chart_title = self.chart_title_entry.get().strip()
         if chart_title:
-            ax.set_title(chart_title, fontsize=CONFIG['title_fontsize'], fontname=selected_font, pad=20)
+            ax.set_title(chart_title, fontsize=CONFIG['title_fontsize'], fontname=selected_font, pad=30)
 
         ax.grid(True, which="both", color="grey", linestyle="--", linewidth=0.3)
 
@@ -261,7 +264,6 @@ class TernaryDiagramApp:
                 color=data["Color"], marker="x", label=data["Legend"], s=25
             )
 
-        # Légende unique
         handles, labels = ax.get_legend_handles_labels()
         by_label = dict(zip(labels, handles))
         ax.legend(by_label.values(), by_label.keys(),
@@ -270,13 +272,13 @@ class TernaryDiagramApp:
                   ncol=CONFIG['legend_ncol'],
                   prop={"family": selected_font, "size": CONFIG['legend_fontsize']})
 
-        fig.tight_layout(rect=[0, 0, 1, 0.95])
+        fig.tight_layout(rect=[0.05, 0.05, 0.95, 0.9])
 
         for widget in self.plot_frame.winfo_children():
             widget.destroy()
 
         canvas = FigureCanvasTkAgg(fig, master=self.plot_frame)
-        canvas.get_tk_widget().pack(expand=True, fill='both')
+        canvas.get_tk_widget().pack(expand=True, fill="both")
         canvas.draw()
 
         self.current_plot = fig
