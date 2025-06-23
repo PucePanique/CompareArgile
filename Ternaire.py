@@ -39,7 +39,7 @@ def validate_abc(a, b, c):
         return False, _("A, B, and C must be decimal numbers.")
     
     total = a + b + c
-    if not (99.5 <= total <= 100.5):
+    if not (98 <= total <= 102):
         return False, _("The sum of A, B, and C must be approximately 100 (±0.5).")
     
     return True, ""
