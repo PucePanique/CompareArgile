@@ -322,41 +322,57 @@ class TernaryDiagramApp:
             messagebox.showerror(_("Save Error"), _("Failed to save the plot: {0}").format(str(e)))
 
     def export_csv(self):
+        # Ouvre une boîte de dialogue pour choisir où sauvegarder le fichier CSV
         file_path = filedialog.asksaveasfilename(
             defaultextension=".csv",
             filetypes=[(_("CSV files"), "*.csv"), (_("All files"), "*.*")]
         )
         if not file_path:
-            return
+            return  # L'utilisateur a annulé la sauvegarde
 
         try:
+            # Ouvre le fichier en écriture avec encodage UTF-8 et séparateur point-virgule
             with open(file_path, mode='w', newline='', encoding='utf-8') as f:
-                writer = csv.DictWriter(f, fieldnames=["A", "B", "C", "Color", "Legend"], delimiter=';')
-                writer.writeheader()
-                writer.writerows(self.data_list)
+                writer = csv.DictWriter(
+                    f,
+                    fieldnames=["A", "B", "C", "Color", "Legend"],  # Entêtes du CSV
+                    delimiter=';'  # Séparateur compatible Excel français
+                )
+                writer.writeheader()       # Écrit la ligne d'en-tête
+                writer.writerows(self.data_list)  # Écrit toutes les données enregistrées
             messagebox.showinfo(_("Success"), _("Data exported successfully."))
         except Exception as e:
+            # Affiche une erreur si quelque chose s'est mal passé pendant l'écriture
             messagebox.showerror(_("Error"), str(e))
 
     def import_csv(self):
+        # Ouvre une boîte de dialogue pour choisir un fichier CSV à importer
         file_path = filedialog.askopenfilename(
             filetypes=[(_("CSV files"), "*.csv"), (_("All files"), "*.*")]
         )
         if not file_path:
-            return
+            return  # L'utilisateur a annulé l'import
 
         try:
+            # Ouvre le fichier en lecture avec le bon séparateur et l'encodage UTF-8
             with open(file_path, mode='r', newline='', encoding='utf-8') as f:
-                reader = csv.DictReader(f, delimiter=';')
+                reader = csv.DictReader(f, delimiter=';')  # Utilise le point-virgule comme séparateur
+
+                # Nettoie les anciennes données de la table et de la liste
                 self.data_list.clear()
                 for row in self.data_table.get_children():
                     self.data_table.delete(row)
 
+                # Lit chaque ligne du fichier CSV
                 for row in reader:
-                    a, b, c = float(row["A"]), float(row["B"]), float(row["C"])
+                    # Remplace la virgule par un point pour accepter les deux formats
+                    a = float(row["A"].replace(',', '.'))
+                    b = float(row["B"].replace(',', '.'))
+                    c = float(row["C"].replace(',', '.'))
                     color = row["Color"]
                     legend = row["Legend"]
 
+                    # Validation comme avant
                     valid, msg = validate_abc(a, b, c)
                     if not valid:
                         raise ValueError(msg)
@@ -369,9 +385,13 @@ class TernaryDiagramApp:
                     })
                     self.data_table.insert("", tk.END, values=(a, b, c, color, legend))
 
+
+            # Si tout s'est bien passé, affiche un message de confirmation
             messagebox.showinfo(_("Success"), _("Data imported successfully."))
         except Exception as e:
+            # En cas d'erreur (ex : mauvais format CSV), affiche une alerte
             messagebox.showerror(_("Import Error"), str(e))
+
 
     
 
