@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import ttkbootstrap as tb
 import gettext
 import sys
+import csv
 
 localedir = 'locales'
 lang = gettext.translation('messages', localedir=localedir, languages=['fr'], fallback=True)
@@ -136,13 +137,10 @@ class TernaryDiagramApp:
         self.entry_legend.bind("<Return>", lambda e: self.submit_button.focus_set())
 
         #Bouton d'enregistrement
-
         self.submit_button = ttk.Button(self.input_frame, text=_("Submit"), command=self.save_values)
         self.submit_button.grid(row=1, column=6, padx=5)
         self.submit_button.tooltip = CreateToolTip(self.submit_button, _("Add the data to the table"))
         self.master.bind('<Control-Return>', lambda e: self.save_values())
-
-
 
         # Tableau pour afficher les données enregistrées
         self.data_table = ttk.Treeview(self.master, columns=("A", "B", "C", "Color", "Legend"), show="headings", height=10)
@@ -165,6 +163,14 @@ class TernaryDiagramApp:
         self.save_plot_button = ttk.Button(self.button_frame, text=_("Save Plot"), command=self.save_plot)
         self.save_plot_button.grid(row=0, column=3, padx=5)
         self.save_plot_button.tooltip = CreateToolTip(self.save_plot_button, _("Save the current plot as an image"))
+
+        self.import_button = ttk.Button(self.button_frame, text=_("Import CSV"), command=self.import_csv)
+        self.import_button.grid(row=0, column=4, padx=5)
+        self.import_button.tooltip = CreateToolTip(self.import_button, _("Import data from a CSV file"))
+
+        self.export_button = ttk.Button(self.button_frame, text=_("Export CSV"), command=self.export_csv)
+        self.export_button.grid(row=0, column=5, padx=5)
+        self.export_button.tooltip = CreateToolTip(self.export_button, _("Export table data to a CSV file"))
 
         # Cadre pour le graphique généré
         self.plot_frame = ttk.Frame(self.master)
@@ -314,6 +320,61 @@ class TernaryDiagramApp:
             messagebox.showinfo(_("Success"), _("Plot saved to {0}").format(file_path))
         except Exception as e:
             messagebox.showerror(_("Save Error"), _("Failed to save the plot: {0}").format(str(e)))
+
+    def export_csv(self):
+        file_path = filedialog.asksaveasfilename(
+            defaultextension=".csv",
+            filetypes=[(_("CSV files"), "*.csv"), (_("All files"), "*.*")]
+        )
+        if not file_path:
+            return
+
+        try:
+            with open(file_path, mode='w', newline='', encoding='utf-8') as f:
+                writer = csv.DictWriter(f, fieldnames=["A", "B", "C", "Color", "Legend"], delimiter=';')
+                writer.writeheader()
+                writer.writerows(self.data_list)
+            messagebox.showinfo(_("Success"), _("Data exported successfully."))
+        except Exception as e:
+            messagebox.showerror(_("Error"), str(e))
+
+    def import_csv(self):
+        file_path = filedialog.askopenfilename(
+            filetypes=[(_("CSV files"), "*.csv"), (_("All files"), "*.*")]
+        )
+        if not file_path:
+            return
+
+        try:
+            with open(file_path, mode='r', newline='', encoding='utf-8') as f:
+                reader = csv.DictReader(f, delimiter=';')
+                self.data_list.clear()
+                for row in self.data_table.get_children():
+                    self.data_table.delete(row)
+
+                for row in reader:
+                    a, b, c = float(row["A"]), float(row["B"]), float(row["C"])
+                    color = row["Color"]
+                    legend = row["Legend"]
+
+                    valid, msg = validate_abc(a, b, c)
+                    if not valid:
+                        raise ValueError(msg)
+                    valid, msg = validate_legend(legend)
+                    if not valid:
+                        raise ValueError(msg)
+
+                    self.data_list.append({
+                        "A": a, "B": b, "C": c, "Color": color, "Legend": legend
+                    })
+                    self.data_table.insert("", tk.END, values=(a, b, c, color, legend))
+
+            messagebox.showinfo(_("Success"), _("Data imported successfully."))
+        except Exception as e:
+            messagebox.showerror(_("Import Error"), str(e))
+
+    
+
 
 # --- 4. Accessibilité : Tooltips ---
 class CreateToolTip(object):
