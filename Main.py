@@ -4,6 +4,8 @@ from ttkbootstrap import Style  # Pour un style moderne avec ttkbootstrap
 from Ternaire import TernaryDiagramApp  # Importer la classe TernaryDiagramApp
 import gettext
 
+#https://www.webapptiv.com/python/python-drag-and-drop-gui-builders/
+
 # Initialisation de gettext
 localedir = 'locales'
 lang = gettext.translation('messages', localedir=localedir, languages=['fr'], fallback=True)
