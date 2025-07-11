@@ -8,6 +8,7 @@ import ttkbootstrap as tb
 import gettext
 import sys
 import csv
+from decimal import Decimal
 
 localedir = 'locales'
 lang = gettext.translation('messages', localedir=localedir, languages=['fr'], fallback=True)
@@ -34,20 +35,19 @@ CONFIG = {
 
 def validate_abc(a, b, c):
     try:
-        a, b, c = float(a), float(b), float(c)
+        a, b, c = Decimal(a), Decimal(b), Decimal(c)
     except ValueError:
         return False, _("A, B, and C must be decimal numbers.")
     
     total = a + b + c
-    if not (98 <= total <= 102):
+    if not (99.5 <= total <= 100.5):
         return False, _("The sum of A, B, and C must be approximately 100 (±0.5).")
     
     return True, ""
 
 
 def validate_legend(legend):
-    if not legend.strip():
-        return False, _("Legend cannot be empty.")
+    # Accept empty legend as valid
     return True, ""
 
 def validate_color(color):
@@ -267,20 +267,32 @@ class TernaryDiagramApp:
 
         ax.grid(True, which="both", color="grey", linestyle="--", linewidth=0.3)
 
+        # --- Group points by (color, legend) ---
+        grouped = {}
         for data in self.data_list:
-            point = (data["A"] / 100, data["B"] / 100, data["C"] / 100)
-            ax.scatter(
-                [point[0]], [point[1]], [point[2]],
-                color=data["Color"], marker="x", label=data["Legend"], s=25
-            )
+            legend = data["Legend"].strip() or _("No Legend")
+            key = (data["Color"], legend)
+            if key not in grouped:
+                grouped[key] = []
+            grouped[key].append((data["A"] / 100, data["B"] / 100, data["C"] / 100))
 
-        handles, labels = ax.get_legend_handles_labels()
-        by_label = dict(zip(labels, handles))
-        ax.legend(by_label.values(), by_label.keys(),
-                  loc=CONFIG['legend_loc'],
-                  bbox_to_anchor=CONFIG['legend_bbox'],
-                  ncol=CONFIG['legend_ncol'],
-                  prop={"family": selected_font, "size": CONFIG['legend_fontsize']})
+        # Plot each group, one legend entry per group
+        for (color, legend), points in grouped.items():
+            a_vals = [p[0] for p in points]
+            b_vals = [p[1] for p in points]
+            c_vals = [p[2] for p in points]
+            if legend != "No Legend":
+                ax.scatter(
+                    a_vals, b_vals, c_vals,
+                    color=color, marker="x", label=legend, s=25
+                )
+
+        ax.legend(
+            loc=CONFIG['legend_loc'],
+            bbox_to_anchor=CONFIG['legend_bbox'],
+            ncol=CONFIG['legend_ncol'],
+            prop={"family": selected_font, "size": CONFIG['legend_fontsize']}
+        )
 
         fig.tight_layout(rect=[0.05, 0.05, 0.95, 0.9])
 
