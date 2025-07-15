@@ -9,7 +9,7 @@ import ttkbootstrap as tb
 import csv
 import sys
 
-from .config import CONFIG
+from config_manager import CONFIG_FILE
 from .validators import validate_abc, validate_color, validate_legend
 from .tooltips import CreateToolTip
 
@@ -21,8 +21,8 @@ class TernaryDiagramApp:
         self.master.title(_("Ternary Diagram Generator"))
         self.data_list = []
         self.master.protocol("WM_DELETE_WINDOW", self.on_close)
-        self.style = tb.Style(CONFIG['style_theme'])
-        self.master.geometry(CONFIG['window_size'])
+        self.style = tb.Style(CONFIG_FILE['style_theme'])
+        self.master.geometry(CONFIG_FILE['window_size'])
         self.create_widgets()
 
     def create_widgets(self):
@@ -51,21 +51,21 @@ class TernaryDiagramApp:
         self.font_frame.pack(pady=10)
 
         ttk.Label(self.font_frame, text=_("Select Font:")).grid(row=0, column=0, padx=5)
-        self.font_var = tk.StringVar(value=CONFIG['default_font'])
+        self.font_var = tk.StringVar(value=CONFIG_FILE['default_font'])
         self.font_dropdown = ttk.Combobox(
             self.font_frame, textvariable=self.font_var,
-            values=CONFIG['font_choices']
+            values=CONFIG_FILE['font_choices']
         )
         self.font_dropdown.grid(row=0, column=1, padx=5)
         self.font_dropdown.state(["readonly"])
 
         ttk.Label(self.font_frame, text=_("Width (cm):")).grid(row=0, column=2, padx=5)
-        self.width_var = tk.DoubleVar(value=CONFIG['default_width_cm'])
+        self.width_var = tk.DoubleVar(value=CONFIG_FILE['default_width_cm'])
         self.width_entry = ttk.Entry(self.font_frame, textvariable=self.width_var, width=10)
         self.width_entry.grid(row=0, column=3, padx=5)
 
         ttk.Label(self.font_frame, text=_("Height (cm):")).grid(row=0, column=4, padx=5)
-        self.height_var = tk.DoubleVar(value=CONFIG['default_height_cm'])
+        self.height_var = tk.DoubleVar(value=CONFIG_FILE['default_height_cm'])
         self.height_entry = ttk.Entry(self.font_frame, textvariable=self.height_var, width=10)
         self.height_entry.grid(row=0, column=5, padx=5)
 
@@ -92,7 +92,7 @@ class TernaryDiagramApp:
         self.color_button = ttk.Button(self.input_frame, text=_("Select Color"), command=self.open_color_picker)
         self.color_button.grid(row=1, column=3, padx=5)
         self.color_button.tooltip = CreateToolTip(self.color_button, _("Choose a color for the point"))
-        self.color_label = ttk.Label(self.input_frame, text=CONFIG['color_default'], background=CONFIG['color_bg'], relief="sunken", width=20)
+        self.color_label = ttk.Label(self.input_frame, text=CONFIG_FILE['color_default'], background=CONFIG_FILE['color_bg'], relief="sunken", width=20)
         self.color_label.grid(row=1, column=4, padx=5)
 
         ttk.Label(self.input_frame, text=_("Legend:")).grid(row=0, column=5, padx=5)
@@ -183,7 +183,7 @@ class TernaryDiagramApp:
         self.entry_b.delete(0, tk.END)
         self.entry_c.delete(0, tk.END)
         self.entry_legend.delete(0, tk.END)
-        self.color_label.config(text=CONFIG['color_default'], background=CONFIG['color_bg'])
+        self.color_label.config(text=CONFIG_FILE['color_default'], background=CONFIG_FILE['color_bg'])
 
     def delete_selected_row(self):
         selected_item = self.data_table.selection()
@@ -210,16 +210,16 @@ class TernaryDiagramApp:
             return
 
         selected_font = self.font_var.get()
-        fig = plt.Figure(figsize=CONFIG['plot_figsize'])
+        fig = plt.Figure(figsize=CONFIG_FILE['plot_figsize'])
         ax = fig.add_subplot(111, projection="ternary")
 
-        ax.set_tlabel(axis1, fontsize=CONFIG['axis_fontsize'], fontname=selected_font, labelpad=15)
-        ax.set_llabel(axis2, fontsize=CONFIG['axis_fontsize'], fontname=selected_font, labelpad=15)
-        ax.set_rlabel(axis3, fontsize=CONFIG['axis_fontsize'], fontname=selected_font, labelpad=15)
+        ax.set_tlabel(axis1, fontsize=CONFIG_FILE['axis_fontsize'], fontname=selected_font, labelpad=15)
+        ax.set_llabel(axis2, fontsize=CONFIG_FILE['axis_fontsize'], fontname=selected_font, labelpad=15)
+        ax.set_rlabel(axis3, fontsize=CONFIG_FILE['axis_fontsize'], fontname=selected_font, labelpad=15)
 
         chart_title = self.chart_title_entry.get().strip()
         if chart_title:
-            ax.set_title(chart_title, fontsize=CONFIG['title_fontsize'], fontname=selected_font, pad=30)
+            ax.set_title(chart_title, fontsize=CONFIG_FILE['title_fontsize'], fontname=selected_font, pad=30)
 
         ax.grid(True, which="both", color="grey", linestyle="--", linewidth=0.3)
 
@@ -244,10 +244,10 @@ class TernaryDiagramApp:
                 )
 
         ax.legend(
-            loc=CONFIG['legend_loc'],
-            bbox_to_anchor=CONFIG['legend_bbox'],
-            ncol=CONFIG['legend_ncol'],
-            prop={"family": selected_font, "size": CONFIG['legend_fontsize']}
+            loc=CONFIG_FILE['legend_loc'],
+            bbox_to_anchor=CONFIG_FILE['legend_bbox'],
+            ncol=CONFIG_FILE['legend_ncol'],
+            prop={"family": selected_font, "size": CONFIG_FILE['legend_fontsize']}
         )
 
         fig.tight_layout(rect=[0.05, 0.05, 0.95, 0.9])

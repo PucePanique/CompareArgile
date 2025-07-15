@@ -1,6 +1,5 @@
 from decimal import Decimal
 from gettext import gettext as _
-from Ternaire.config import CONFIG
 
 def validate_abc(a, b, c):
     try:
